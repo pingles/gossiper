@@ -1,0 +1,3 @@
+# Gossiper
+
+Gossip protocol prototype.
