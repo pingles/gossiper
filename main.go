@@ -6,6 +6,8 @@ import (
 	ml "github.com/hashicorp/memberlist"
 	"os/signal"
 	"os"
+	"strings"
+	"strconv"
 	"time"
 )
 
@@ -34,6 +36,11 @@ func (g *Gossiper) PrintMembers() {
 	}
 }
 
+func (g *Gossiper) Join(addr string) {
+	log.Println("attempting to join", addr)
+	g.memberlist.Join([]string{addr})
+}
+
 func (g *Gossiper) Leave() {
 	defer func() {
 		g.shutdownCh<-true
@@ -58,15 +65,34 @@ func AttachShutdownHandler(g *Gossiper) {
 }
 
 func main() {
-	var bind = flag.String("bind", "127.0.0.1", "tcp and udp address for gossip")
+	hostname, _ := os.Hostname()
+	
+	var bindAddressAndPort = flag.String("bind", "127.0.0.1:7000", "tcp and udp address for gossip")
+	var join = flag.String("join", "", "address of existing node to join to, e.g. 127.0.0.1:7000")
+	var name = flag.String("name", hostname, "node name")
+	flag.Parse()
+	
 	config := ml.DefaultLocalConfig()
-	config.BindAddr = *bind
+	bindParts := strings.Split(*bindAddressAndPort, ":")
+	config.BindAddr = bindParts[0]
+	if len(bindParts) > 1 {
+		bindPort, err := strconv.Atoi(bindParts[1])
+		if err != nil {
+			log.Fatal("invalid bind address", err)
+		}
+		config.BindPort = bindPort
+	}
+	config.Name = *name
 	
 	gossiper, err := NewGossiper(config)
 	if err != nil {
 		log.Fatal(err)
 	}
 	AttachShutdownHandler(gossiper)
+	
+	if *join != "" {
+		gossiper.Join(*join)
+	}
 	
 	gossiper.PrintMembers()
 	gossiper.Wait()
