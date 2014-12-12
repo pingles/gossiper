@@ -44,6 +44,7 @@ func (g *Gossiper) Leave() {
 	if err != nil {
 		log.Println("error leaving", err)
 	}
+	g.memberlist.Shutdown()
 }
 
 func AttachShutdownHandler(g *Gossiper) {
