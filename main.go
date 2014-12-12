@@ -16,13 +16,57 @@ type Gossiper struct {
 	memberlist *ml.Memberlist
 }
 
+type GossipDelegate struct {
+	gossiper *Gossiper
+}
+
+func NewGossipDelegate(g *Gossiper) *GossipDelegate {
+	return &GossipDelegate{gossiper: g}
+}
+
+func (m *GossipDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+	empty := make([][]byte, 0)
+	return empty
+}
+
+func (m *GossipDelegate) LocalState(join bool) []byte {
+	log.Println("delegate: local state")
+	empty := make([]byte, 0)
+	return empty
+}
+
+func (m *GossipDelegate) MergeRemoteState(s []byte, join bool) {
+	log.Println("delegate: merge remote state")
+}
+
+func (m *GossipDelegate) NodeMeta(limit int) []byte {
+	log.Println("delegate: node meta")
+	empty := make([]byte, 0)
+	return empty
+}
+
+func (m *GossipDelegate) NotifyMsg(msg []byte) {
+	log.Println("delegate: notify msg")
+}
+
+//////////////////
+
+
+
+
 func NewGossiper(c *ml.Config) (*Gossiper, error) {
+	stopCh := make(chan bool)
+	gossiper := &Gossiper{shutdownCh: stopCh}
+	delegate := NewGossipDelegate(gossiper)
+	c.Delegate = delegate
+	
 	list, err := ml.Create(c)
 	if err != nil {
 		return nil, err
 	}
-	stopCh := make(chan bool)
-	return &Gossiper{stopCh, list}, nil
+	gossiper.memberlist = list
+	
+	return gossiper, nil
 }
 
 // waits for a shutdown hook from shutdownCh
